@@ -28,23 +28,23 @@ metadata {
     
 	tiles {
          standardTile("switch", "device.switch", width: 2, height: 2) {
-            state "on", label: "Relay 2 On", action: "off", icon: "http://swiftlet.technology/wp-content/uploads/2016/06/Switch-On-104-edit.png", backgroundColor: "#53a7c0"            
-			state "off", label: "Relay 2 Off", action: "on", icon: "http://swiftlet.technology/wp-content/uploads/2016/06/Switch-Off-104-edit.png", backgroundColor: "#ffffff"
+            state "on", label: "Relay 2 On", action: "off", backgroundColor: "#53a7c0"            
+			state "off", label: "Relay 2 Off", action: "on", backgroundColor: "#ffffff"
         }
         standardTile("anaDig1", "device.anaDig1", inactiveLabel: false) {
-			state "open", label: '${name}', icon: "st.contact.contact.open", backgroundColor: "#ffa81e"
-			state "closed", label: '${name}', icon: "st.contact.contact.closed", backgroundColor: "#79b821"
+			state "open", label: '${name}', backgroundColor: "#ffa81e"
+			state "closed", label: '${name}', backgroundColor: "#79b821"
             state "val", label:'${currentValue}v', unit:"", defaultState: true
 		}
         standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+			state "default", label:'', action:"refresh.refresh"
 		}
         standardTile("powered", "device.powered", inactiveLabel: false) {
-			state "powerOn", label: "Power On", icon: "st.switches.switch.on", backgroundColor: "#79b821"
-			state "powerOff", label: "Power Off", icon: "st.switches.switch.off", backgroundColor: "#ffa81e"
+			state "powerOn", label: "Power On", backgroundColor: "#79b821"
+			state "powerOff", label: "Power Off", backgroundColor: "#ffa81e"
 		}
 		standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat") {
-			state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
+			state "configure", label:'', action:"configuration.configure"
 		}
         standardTile("blank", "device.blank", inactiveLabel: true, decoration: "flat") {
         	state("blank", label: '')
