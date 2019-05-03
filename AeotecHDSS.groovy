@@ -2,7 +2,6 @@
  *	Aeon Labs Heavy Duty Smart Switch - ZW078
  *
  *  Copyright 2015 Elastic Development
- *  Ported to Hubitat by peng1can
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,8 +12,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Ported from SmartThings version by jpansara. Original version can be found at:
+ *  Ported from SmartThings driver written by jpansara. Original (ST) version can be found at:
  *  https://github.com/jpansarasa/SmartThings/blob/master/DeviceTypes/AeotecHDSS.groovy
+ *
+ *  Version 1.4.0 and after ported to Hubitat and developed/maintained by peng1can.
+ *  https://github.com/peng1can/Hubitat/blob/master/AeotecHDSS.groovy
  *
  *  Revision History
  *  ----------------
@@ -35,8 +37,13 @@
  *  2015-01-27: Version: 1.3.0
  *  Added preference to turn on/off displaying of power events in the activity log
  *
- *  2019-04-15: Version: 1.3.1
- *  Ported to Hubitat
+ *  2019-04-15: Version: 1.4.0
+ *  Minimum code changes to port to Hubitat
+ *
+ *  2019-05-03: Version: 1.4.1
+ *  Trivial changes to ease future development and align some things with Smart Switch 6 driver
+ *  Removed some SmartThings cruft
+ *  Changed the fingerprinting method
  *
  *  Developers Notes:
  *  Raw Description	0 0 0x1001 0 0 0 12 0x5E 0x25 0x32 0x31 0x27 0x2C 0x2B 0x70 0x85 0x59 0x56 0x72 0x86 0x7A 0x73 0x98 0xEF 0x5A
@@ -60,31 +67,36 @@
  *  0x73 COMMAND_CLASS_POWERLEVEL		V1
  *  0x98 COMMAND_CLASS_SECURITY			V1
  *  0xEF COMMAND_CLASS_MARK			V1
- *  ---- ---- Supported but unknown types -----	--
- *  0x5E ???
- *  0x59 ???
- *  0x5A ???
+ *  0x5E COMMAND_CLASS_ZWAVE_PLUS_INFO
+ *  0x59 COMMAND_CLASS_ASSOCIATION_GRP_INFO   V1
+ *  0x5A COMMAND_CLASS_DEVICE_RESET_LOCALLY V1
  **/
 
 metadata {
     definition (name: "Aeon Labs Heavy Duty Smart Energy Switch", namespace: "peng1can", author: "peng1can") {
         capability "Switch"
-        capability "Energy Meter"
+        capability "Polling"
         capability "Power Meter"
-        capability "Temperature Measurement"
-        capability "Configuration"
+        capability "Energy Meter"
+        capability "Refresh"
         capability "Sensor"
         capability "Actuator"
-        capability "Polling"
-        capability "Refresh"
+        capability "Configuration"
+        capability "Temperature Measurement"
 
         attribute "voltage", "number"
         attribute "current", "number"
 
         command "reset"
+        // Commands I would like to implement:
+        // command "factoryReset"
+        // command "getDeviceInfo"
+        // command "energy"
 
-
-        fingerprint deviceId: "0x1001", inClusters: "0x5E,0x25,0x32,0x31,0x27,0x2C,0x2B,0x70,0x85,0x59,0x56,0x72,0x86,0x7A,0x73,0x98,0xEF,0x5A"
+        //This fingerprinting needs tested
+        fingerprint mfr: "0134", prod: "0259", model: "0078" // Aeotec Heavy Duty Smart Switch 
+        // Old fingerprint code
+        //fingerprint deviceId: "0x1001", inClusters: "0x5E,0x25,0x32,0x31,0x27,0x2C,0x2B,0x70,0x85,0x59,0x56,0x72,0x86,0x7A,0x73,0x98,0xEF,0x5A"
     }
 
     // simulator metadata
@@ -109,14 +121,14 @@ metadata {
     // tile definitions
     tiles {
         standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: true) {
-            state "on", label: '${name}', action: "switch.off", icon: "st.switches.switch.on",  backgroundColor: "#79b821"
-            state "off", label: '${name}', action: "switch.on",  icon: "st.switches.switch.off", backgroundColor: "#ffffff"
+            state "on", label: '${name}', action: "switch.off", backgroundColor: "#79b821"
+            state "off", label: '${name}', action: "switch.on", backgroundColor: "#ffffff"
         }
         valueTile("energy", "device.energy", decoration: "flat") {
             state "default", label:'${currentValue} kWh'
         }
         standardTile("reset", "device.energy", inactiveLabel: false, decoration: "flat") {
-            state "default", label:'reset kWh', action:"reset", icon:"st.secondary.refresh-icon"
+            state "default", label:'reset kWh', action:"reset"
         }
         valueTile("power", "device.power", decoration: "flat") {
             state "default",  label: '${currentValue} W'
@@ -128,10 +140,10 @@ metadata {
             state "default",  label: '${currentValue} V'
         }
         standardTile("configure", "device.power", inactiveLabel: false, decoration: "flat") {
-            state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
+            state "configure", label:'', action:"configuration.configure"
         }
         standardTile("refresh", "device.power", inactiveLabel: false, decoration: "flat") {
-            state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+            state "default", label:'', action:"refresh.refresh"
         }
 
         main (["switch","energy"])
@@ -530,7 +542,7 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
  *  COMMAND_CLASS_SENSOR_MULTILEVEL  (0x31)
  *	
  *  Short	sensorType	Supported Sensor: 0x01 (temperature Sensor)
- *  Short	scale		Supported scale:  0x00 (Celsius) and 0x01 (Fahrenheit)   
+ *  Short	scale		Supported scale:  0x00 (Celsius) and 0x01 (Fahrenheit)   
  */
 def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd)
 {
