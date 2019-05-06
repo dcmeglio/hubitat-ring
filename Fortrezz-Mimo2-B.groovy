@@ -15,6 +15,9 @@
  * Version 1.1 - 5/3/19
  * Basic Port from SmartThings
  * Can you port a driver that it just a glorified TODO list?
+ * 
+ * Version 1.2 - 5/6/19 - peng1can
+ * Very basic but working b-side child driver.
  *
  */
 metadata {
@@ -90,17 +93,15 @@ def eventParse(evt) {
 
 // handle commands
 def on() {
-    parent.on2(device.id)
+    parent.on2()
 	log.debug("Executing 'on'")
-	// TODO: Send Event to parent device for "on2"
 }
 
 def off() {
-    parent.off2(device.id)
+	parent.off2()
 	log.debug("Executing 'off'")
-	// TODO: Send Event to parent device for "off2"
 }
 def refresh() {
-	parent.refresh2(device.id)
+	parent.refresh()
     log.debug("Executing 'refresh'")
 }
