@@ -14,9 +14,11 @@
  *
  * Ported from SmartThings by peng1can
  *
- * Version 1.1 - 5/3/19
+ * Version 1.1 - 5/3/19 - peng1can
  * Basic Port from SmartThings
  *
+ * Version 1.2 - 5/6/19 - peng1can
+ * Fixed the basic parent/child code
  *
  */
 metadata {
@@ -114,16 +116,25 @@ def parse(String description) {
 	return result
 }
 
+def installed() {
+	addChildDevice("FortrezZ MIMO2+ B-Side", 
+				   "${device.deviceNetworkId}.B",
+				   [label: "${device.displayName} B-Side", isComponent: true, name: "B-Side"])
+}
+
 def updated() { // neat built-in smartThings function which automatically runs whenever any setting inputs are changed in the preferences menu of the device handler
-    
+	if (!childDevices) {
+		addChildDevice("FortrezZ MIMO2+ B-Side","${device.deviceNetworkId}.B",
+				   [label: "${device.displayName} B-Side", isComponent: true, name: "B-Side"])
+	}
     if (state.count == 1) // this bit with state keeps the function from running twice ( which it always seems to want to do) (( oh, and state.count is a variable which is nonVolatile and doesn't change per every parse request.
     {
         state.count = 0
         log.debug "Settings Updated..."
-        return response(delayBetween([
-            configure(), // the response() function is used for sending commands in reponse to an event, without it, no zWave commands will work for contained function
-            refresh()
-            ], 200))
+		configure()
+		refresh()
+		return
+//        return response(delayBetween([configure(),refresh()],200)) // hubitat can only delayBetween zwave commands
     }
     else {state.count = 1}
 }
