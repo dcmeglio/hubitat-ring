@@ -1,5 +1,5 @@
 /**
- *  FortrezZ MIMO2+ B-Side
+ *  FortrezZ MIMO2+ Child
  *
  *  Copyright 2016 FortrezZ, LLC
  *
@@ -19,9 +19,12 @@
  * Version 1.2 - 5/6/19 - peng1can
  * Very basic but working b-side child driver.
  *
+ * Version 2.0 - 5/9/19 - peng1can
+ * Overhaul to parent/child device
+ *
  */
 metadata {
-	definition (name: "FortrezZ MIMO2+ B-Side", namespace: "fortrezz", author: "FortrezZ, LLC") {
+	definition (name: "FortrezZ MIMO2+ Child Relay", namespace: "peng1can", author: "D Canfield") {
 		capability "Contact Sensor"
 		capability "Relay Switch"
 		capability "Switch"
@@ -31,10 +34,10 @@ metadata {
     
 	tiles {
          standardTile("switch", "device.switch", width: 2, height: 2) {
-            state "on", label: "Relay 2 On", action: "off", backgroundColor: "#53a7c0"            
-			state "off", label: "Relay 2 Off", action: "on", backgroundColor: "#ffffff"
+            state "on", label: "Relay On", action: "off", backgroundColor: "#53a7c0"            
+			state "off", label: "Relay Off", action: "on", backgroundColor: "#ffffff"
         }
-        standardTile("anaDig1", "device.anaDig1", inactiveLabel: false) {
+        standardTile("anaDig", "device.anaDig", inactiveLabel: false) {
 			state "open", label: '${name}', backgroundColor: "#ffa81e"
 			state "closed", label: '${name}', backgroundColor: "#79b821"
             state "val", label:'${currentValue}v', unit:"", defaultState: true
@@ -53,7 +56,7 @@ metadata {
         	state("blank", label: '')
         }
 		main (["switch"])
-		details(["switch", "anaDig1", "blank", "blank", "refresh", "powered"])
+		details(["switch", "anaDig", "blank", "blank", "refresh", "powered"])
 	}
 }
 
@@ -73,32 +76,32 @@ def eventParse(evt) {
     	case "powered":
         	sendEvent(name: evt.name, value: evt.value)
         	break
-    	case "switch2":
+    	case "switch":
         	sendEvent(name: "switch", value: evt.value)
         	break
-    	case "contact2":
+    	case "contact":
         	sendEvent(name: "contact", value: evt.value)
         	break
-    	case "voltage2":
+    	case "voltage":
         	sendEvent(name: "voltage", value: evt.value)
         	break
-    	case "relay2":
+    	case "relay":
         	sendEvent(name: evt.name, value: evt.value)
         	break
-    	case "anaDig2":
-        	sendEvent(name: "anaDig1", value: evt.value)
-        	break
+//    	case "anaDig":
+//        	sendEvent(name: "anaDig1", value: evt.value)
+  //      	break
     }
 }
 
 // handle commands
 def on() {
-    parent.on2()
+    parent.on(device.deviceNetworkId)
 	log.debug("Executing 'on'")
 }
 
 def off() {
-	parent.off2()
+	parent.off(device.deviceNetworkId)
 	log.debug("Executing 'off'")
 }
 def refresh() {
