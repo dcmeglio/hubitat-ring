@@ -2,6 +2,7 @@
  *  MIMO2 Device Handler
  *
  *  Copyright 2016 FortrezZ, LLC
+ *  Copyright 2019 D Canfield
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -20,9 +21,12 @@
  * Version 1.2 - 5/6/19 - peng1can
  * Fixed the basic parent/child code
  *
+ * Version 2.0 - 5/6/19 - peng1can
+ * Overhaul to make two separate child devices for A side and B side
+ *
  */
 metadata {
-	definition (name: "FortrezZ MIMO2+", namespace: "fortrezz", author: "FortrezZ, LLC") {
+	definition (name: "FortrezZ MIMO2+", namespace: "peng1can", author: "D Canfield") {
 		capability "Alarm"
 		capability "Contact Sensor"
 		capability "Switch"
@@ -31,8 +35,7 @@ metadata {
         capability "Refresh"
         
         attribute "powered", "string"
-        attribute "relay", "string"
-        
+        attribute "relay", "string"      
         attribute "relay2", "string"
         attribute "contact2", "string"
         attribute "voltage2", "string"
@@ -41,6 +44,8 @@ metadata {
 		command "off"
         command "on2"
         command "off2"
+		command "recreateChildDevices"
+		command "deleteChildren"
         
         fingerprint deviceId: "0x2100", inClusters: "0x5E,0x86,0x72,0x5A,0x59,0x71,0x98,0x7A"
 	}
@@ -58,7 +63,6 @@ metadata {
          standardTile("switch", "device.switch", width: 2, height: 2) {
             state "on", label: "Relay 1 On", action: "off", backgroundColor: "#53a7c0"            
 			state "off", label: "Relay 1 Off", action: "on", backgroundColor: "#ffffff"
-
         }
          standardTile("switch2", "device.switch2", width: 2, height: 2, inactiveLabel: false) {
             state "on", label: "Relay 2 On", action: "off2", backgroundColor: "#53a7c0"
@@ -117,16 +121,37 @@ def parse(String description) {
 }
 
 def installed() {
-	addChildDevice("FortrezZ MIMO2+ B-Side", 
-				   "${device.deviceNetworkId}.B",
+	createChildDevices()
+}
+
+def recreateChildDevices() {
+    log.debug "recreateChildDevices"
+    deleteChildren()
+    createChildDevices()
+}
+
+def deleteChildren() {
+	log.debug "deleteChildren"
+	def children = getChildDevices()
+    
+    children.each {child->
+  		deleteChildDevice(child.deviceNetworkId)
+    }
+}
+
+private void createChildDevices() {
+	log.debug "createChildDevices"
+	addChildDevice("FortrezZ MIMO2+ Child Relay","${device.deviceNetworkId}.A",
+				   [label: "${device.displayName} A-Side", isComponent: true, name: "A-Side"])
+	addChildDevice("FortrezZ MIMO2+ Child Relay","${device.deviceNetworkId}.B",
 				   [label: "${device.displayName} B-Side", isComponent: true, name: "B-Side"])
 }
 
-def updated() { // neat built-in smartThings function which automatically runs whenever any setting inputs are changed in the preferences menu of the device handler
+def updated() { 
 	if (!childDevices) {
-		addChildDevice("FortrezZ MIMO2+ B-Side","${device.deviceNetworkId}.B",
-				   [label: "${device.displayName} B-Side", isComponent: true, name: "B-Side"])
+		createChildDevices()
 	}
+	// Test and possibly remove the state.count bit for Hubitat (original dev had it here for SmartThings):
     if (state.count == 1) // this bit with state keeps the function from running twice ( which it always seems to want to do) (( oh, and state.count is a variable which is nonVolatile and doesn't change per every parse request.
     {
         state.count = 0
@@ -153,41 +178,53 @@ def zwaveEvent(int endPoint, hubitat.zwave.commands.sensorbinaryv1.SensorBinaryR
 
 def zwaveEvent(int endPoint, hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) // event for seeing the states of relay 1 and relay 2
 {
-	def map = [:] // map for containing the name and state fo the specified relay
-    if (endPoint == 3)
-    {
-    	if (cmd.value) // possible values are 255 and 0 (0 is false)
-    		{map.value = "on"}
-    	else
-    		{map.value = "off"}
-        map.name = "switch"
-        log.debug "sent a SwitchBinary command $map.name $map.value" // the map is only used for debug messages. not for the return command to the device
-        return [name: "switch", value: cmd.value ? "on" : "off"]
-    }
-    else if (endPoint == 4)
-    {
-    	if (cmd.value)
-    		{map.value = "on"}
-    	else
-    		{map.value = "off"}
-        map.name = "switch2"
-        sendEvent(name: "relay2", value: "$map.value")
-        log.debug "sent a SwitchBinary command $map.name $map.value" // the map is only used for debug messages. not for the return command to the device
-        return [name: "switch2", value: cmd.value ? "on" : "off"]
-    }
+	def map = [:] // map for containing the name and state of the specified relay
+	map.name = "switch"
+	def childDevice
+	if (cmd.value) // possible values are 255 and 0 (0 is false)
+  		{map.value = "on"}
+   	else
+   		{map.value = "off"}
+	if (endPoint == 3) 
+	{
+			childDevice = getChildDevice("${device.deviceNetworkId}.A")
+		    pname = "switch"
+	}
+	else if (endPoint == 4) 
+	{
+			childDevice = getChildDevice("${device.deviceNetworkId}.B")
+		    pname = "switch2"
+	}
+    log.debug "sent a SwitchBinary command $map.name $map.value" // the map is for debug messages and children, not for the return command to the parent
+	childDevice.sendEvent(map)
+    return [name: "$pname", value: cmd.value ? "on" : "off"]
 }
-   
+	
+	
 def zwaveEvent (int endPoint, hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd) // sensorMultilevelReport is used to report the value of the analog voltage for SIG1
 {
 	def map = [:]
     def stdEvent = [:]
     def voltageVal = CalculateVoltage(cmd.scaledSensorValue) // saving the scaled Sensor Value used to enter into a large formula to determine actual voltage value
-    if (endPoint == 1) //endPoint 1 is for SIG1
+	def childDevice
+
+	if (endPoint == 1) //endPoint 1 is for SIG1
+	{
+		log.debug "endPoint 1"
+		childDevice = getChildDevice("${device.deviceNetworkId}.A")
+		pname = "anaDig1"
+	}	
+	else if (endPoint == 2 ) //endPoint 2 is for SIG2
+	{
+		log.debug "endPoint 2"
+		childDevice = getChildDevice("${device.deviceNetworkId}.B")
+		pname = "anaDig2"
+	}
+		
+	if (state.AD1 == false) // state.AD1 is  to determine which state the anaDig1 tile should be in (either analogue or digital mode)
     {
-    	if (state.AD1 == false) // state.AD1 is  to determine which state the anaDig1 tile should be in (either analogue or digital mode)
-        {
-        	map.name = "anaDig1"
-            stdEvent.name = "contact"
+       	map.name = "$pname"
+        stdEvent.name = "contact"
             if (voltageVal < 2) { // DK changed to 2v to follow LED behavior
             	map.value = "closed"
                 stdEvent.value = "closed"
@@ -200,42 +237,18 @@ def zwaveEvent (int endPoint, hubitat.zwave.commands.sensormultilevelv5.SensorMu
         }
         else //or state.AD1 is true for analogue mode
         {
-        	map.name = "anaDig1"
+        	map.name = "$pname"
             stdEvent.name = "voltage"
         	map.value = voltageVal
             stdEvent.value = voltageVal
         	map.unit = "v"
             stdEvent.unit = "v"
         }
-    }
-    else if (endPoint == 2) // endpoint 2 is for SIG2
-    {
-        if (state.AD2 == false)
-        {
-        	map.name = "anaDig2"
-            stdEvent.name = "contact2"
-            if (voltageVal < 2) {
-            	map.value = "closed"
-                stdEvent.value = "closed"
-            }
-            else
-            {
-            	map.value = "open"
-                stdEvent.value = "open"
-            } 
-        }
-        else
-        {
-        	map.name = "anaDig2"
-            stdEvent.name = "voltage2"
-        	map.value = voltageVal
-            stdEvent.value = voltageVal
-        	map.unit = "v"
-            stdEvent.unit = "v"
-        }
-    }
+ 
+  	//log.debug map.name map.value
+	childDevice.sendEvent(stdEvent)
 	log.debug "sent a SensorMultilevelReport $map.name $map.value"
-    sendEvent(stdEvent)
+    sendEvent(stdEvent)  //Might need removed
     return map
 }
 
@@ -339,24 +352,31 @@ def configure() {
     ], 200)
 }
 
-def on() {	
-	return encap(zwave.basicV1.basicSet(value: 0xff), 3) // physically changes the relay from on to off and requests a report of the relay
-    // oddly, smartThings automatically sends a switchBinaryGet() command whenever the above basicSet command is sent, so we don't need to send one here.
+def on(child) {
+	log.debug "On $child"
+	if (child == "${device.deviceNetworkId}.B") {
+	return encap(zwave.basicV1.basicSet(value: 0xff), 4) // physically changes the relay from on to off and requests a report of the relay
+	} else {
+	return encap(zwave.basicV1.basicSet(value: 0xff), 3) // Use switch 1 if it's child A or If there's no child defined (the button was pressed on the parent device)
+	}
 }
 
-def off() {
-    return encap(zwave.basicV1.basicSet(value: 0x00), 3) // physically changes the relay from on to off and requests a report of the relay
-		// oddly, smartThings automatically sends a switchBinaryGet() command whenever the above basicSet command is sent, so we don't need to send one here.
+def off(child) {
+	log.debug "Off $child"
+	if (child == "${device.deviceNetworkId}.B") {
+	return encap(zwave.basicV1.basicSet(value: 0x00), 4) // physically changes the relay from on to off and requests a report of the relay
+	} else {
+	return encap(zwave.basicV1.basicSet(value: 0x00), 3) // Same as above
+	} 
 }
 
 def on2() {
    return encap(zwave.basicV1.basicSet(value: 0xff), 4)
-        // oddly, smartThings automatically sends a switchBinaryGet() command whenever the above basicSet command is sent, so we don't need to send one here.
+        // on2 and off2 should now only be reachable in the parent interface.
 }
 
 def off2() {
     return encap(zwave.basicV1.basicSet(value: 0x00), 4)
-        // oddly, smartThings automatically sends a switchBinaryGet() command whenever the above basicSet command is sent, so we don't need to send one here.
 }
 
 def refresh() {
