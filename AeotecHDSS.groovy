@@ -1,6 +1,6 @@
 /**
  *
- *  Aeon Smart Energy Switch 6 (gen5)
+ *  Aeotec Heavy Duty Smart Switch
  *
  *  Copyright 2019 peng1can
  *  based on jbisson, James P ('elasticdev'), Mr Lucky, lg kahn code.
