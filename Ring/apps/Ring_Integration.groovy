@@ -378,12 +378,12 @@ def handleOff(device, cameraId) {
 
 def handleSiren(device, cameraId) {
 	log.debug "Handling Siren event for ${cameraId}"
-	//runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
+	runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
 	device.sendEvent(name: "alarm", value: "siren")
 }
 
 def handleBoth(device, cameraId) {
-	//runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
+	runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
 	device.sendEvent(name: "alarm", value: "siren")
 }
 
@@ -413,7 +413,7 @@ def handleStrobe(device, cameraId) {
 		pause(strobePauseInMs)
 	}
 	device.updateDataValue("strobing", "false")*/
-	//runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
+	runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
 	device.sendEvent(name: "alarm", value: "siren")
 }
 
