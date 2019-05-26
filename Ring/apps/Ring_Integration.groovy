@@ -507,7 +507,7 @@ def trigger(level) {
 				if (device == null)
 					continue
 				log.debug "Triggering button press for ${device}"
-				device.sendEvent(name: "button", value: "pushed")
+				device.sendEvent(name: "pushed", value: "1")
 				break
 			}
 		}
