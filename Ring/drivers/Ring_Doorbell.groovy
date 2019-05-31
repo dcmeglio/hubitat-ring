@@ -21,3 +21,7 @@ def record() {
 def installed() {
 	sendEvent(name: "numberOfButtons", value: "1")
 }
+
+def push() {
+	sendEvent(name: "pushed", value: "1")
+}
