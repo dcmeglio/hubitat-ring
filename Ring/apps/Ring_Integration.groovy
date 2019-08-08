@@ -26,6 +26,7 @@ def prefApiAccess() {
 		section("Ring Login Information"){
 			input("ringUsername", "text", title: "Ring Username", description: "Enter your Ring username", required: true)
 			input("ringPassword", "password", title: "Ring Password", description: "Enter your Ring password", required: true)
+			input "debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false			
 		}
 	}
 }
@@ -68,36 +69,59 @@ def prefRingTriggerSettings() {
 }
 
 def installed() {
-	log.debug "Installed with settings: ${settings}"
+	logDebug "Installed with settings: ${settings}"
 
 	initialize()
 }
 
 def updated() {
-	log.debug "Updated with settings: ${settings}"
+	logDebug "Updated with settings: ${settings}"
 	unschedule()
 	unsubscribe()
 	initialize()
 }
 
 def initialize() {
-	log.debug "initializing"
+	logDebug "initializing"
 	cleanupChildDevices()
 	createChildDevices()
 	cleanupSettings()
 	runEvery5Minutes(updateDevices)
-	schedule("0/30 * * * * ? *", updateDevices)
+	schedule("0 * * * * ? *", updateDevices)
 }
 
+def getAuthToken(token)
+{
+    params = [
+    	uri: "https://api.ring.com",
+    	path: "/clients_api/session",
+        headers: [
+        	Authorization: "Bearer ${token}",
+            "User-Agent": "iOS"
+    	],
+        requestContentType: "application/x-www-form-urlencoded",
+        body: "device%5Bos%5D=ios&device%5Bhardware_id%5D=a565187537a28e5cc26819e594e28213&api_version=9"
+	]
+
+    try {
+        httpPost(params) { resp ->
+            return resp.data.profile.authentication_token
+        }
+    } catch (e) {
+        log.error "HTTP Exception Received on POST: $e"
+        log.error "response data: ${resp.data}"
+        login()
+        return        
+    }
+}
 
 def updateDevices()
 {
-	log.debug "refreshing ring devices"
-	def token = state.token
-	if (token == false)
-		return false
-	
-		def params = [
+	logDebug "refreshing ring devices"
+	def token = getAuthToken(state.token)
+	if (!token) return false
+
+    def params = [
 		uri: "https://api.ring.com",
 		path: "/clients_api/ring_devices",
 		query: [
@@ -105,7 +129,7 @@ def updateDevices()
             "auth_token": token
     	]
 	]
-	try
+    try
 	{
 		httpGet(params) { resp ->
 			for (camera in resp.data.stickup_cams) {
@@ -163,9 +187,7 @@ def updateDevices()
 	}
 	catch (e)
 	{
-		log.debug e
-		if (e.statusCode == 401)
-			login()
+        logDebug e
 	}
 }
 
@@ -202,7 +224,7 @@ def getRingDevices() {
 	}
 	catch (e)
 	{
-		log.debug e
+		logDebug e
 	}
 	return true
 }
@@ -292,10 +314,10 @@ def cleanupSettings()
 			}
 		}
 		else if (property.key.startsWith("cameraMotionTrigger")) {
-			log.debug "checking for ${property.key}"
+			logDebug "checking for ${property.key}"
 			deviceName = property.key.replace("cameraMotionTrigger","")
 			if (!getChildDevice("ring:" + deviceName)) {
-				log.debug "deleting it"
+				logDebug "deleting it"
 				app.removeSetting(property.key)
 			}
 		}
@@ -304,7 +326,7 @@ def cleanupSettings()
 
 def login() 
 {
-	log.debug "Refreshing token"
+	logDebug "Refreshing token"
 	state.token = null
 	def s = "${ringUsername}:${ringPassword}"
 	String encodedUandP = s.bytes.encodeBase64()
@@ -331,33 +353,12 @@ def login()
         
     }
     
-    params = [
-    	uri: "https://api.ring.com",
-    	path: "/clients_api/session",
-        headers: [
-        	Authorization: "Bearer ${token}",
-            "User-Agent": "iOS"
-    	],
-        requestContentType: "application/x-www-form-urlencoded",
-        body: "device%5Bos%5D=ios&device%5Bhardware_id%5D=a565187537a28e5cc26819e594e28213&api_version=9"
-	]
-
-    try {
-        httpPost(params) { resp ->
-            token = resp.data.profile.authentication_token
-        }
-    } catch (e) {
-        log.error "HTTP Exception Received on POST: $e"
-        log.error "response data: ${resp.data}"
-        return
-        
-    }
 	state.token = token
     return token
 }
 
 def handleOn(device, cameraId) {
-	log.debug "Handling On event for ${cameraId}"
+	logDebug "Handling On event for ${cameraId}"
 
 	runCommandWithRetry(cameraId, "floodlight_light_on")
 	pause(250)
@@ -367,9 +368,9 @@ def handleOn(device, cameraId) {
 }
 
 def handleOff(device, cameraId) {
-	log.debug "Handling Off event for ${cameraId}"
+	logDebug "Handling Off event for ${cameraId}"
 	device.updateDataValue("strobing", "false")
-	log.debug device.getDataValue("strobing")
+	logDebug device.getDataValue("strobing")
 	runCommandWithRetry(cameraId, "floodlight_light_off")
 	runCommandWithRetry(cameraId, "siren_off")
 	
@@ -377,7 +378,7 @@ def handleOff(device, cameraId) {
 }
 
 def handleSiren(device, cameraId) {
-	log.debug "Handling Siren event for ${cameraId}"
+	logDebug "Handling Siren event for ${cameraId}"
 	runCommandWithRetry(cameraId, "siren_on", "PUT", [duration: 10])
 	device.sendEvent(name: "alarm", value: "siren")
 }
@@ -391,11 +392,11 @@ def handleStrobe(device, cameraId) {
 /*	def strobePauseInMs = 3000
 	def strobeCount = 5
 	device.updateDataValue("strobing", "true")
-	log.debug "Handling Strobe event for ${cameraId}"
+	logDebug "Handling Strobe event for ${cameraId}"
 	device.sendEvent(name: "alarm", value: "strobe")
 	
 	for (def i = 0; i < strobeCount; i++) {
-		log.debug device.getDataValue("strobing")
+		logDebug device.getDataValue("strobing")
 		if (device.getDataValue("strobing") == "false")
 			return
 		runCommandWithRetry(cameraId, "floodlight_light_on")
@@ -444,7 +445,7 @@ def runCommand(deviceId, command, method = "PUT", parameters = null) {
 			params.query[key] = value
 		}
 	}
-	log.debug "/clients_api/doorbots/${deviceId}/${command}"
+	logDebug "/clients_api/doorbots/${deviceId}/${command}"
 	def result = null
 	if (method == "PUT")
 	{
@@ -476,7 +477,7 @@ def runCommandWithRetry(deviceId, command, method = "PUT", parameters = null) {
 		else if (e.statusCode >= 200 && e.statusCode <= 299)
 			return
 		else
-			log.debug e
+			logDebug e
 	}
 }
 
@@ -494,7 +495,7 @@ def trigger(level) {
 				device = getChildDevice("ring:" + deviceName)
 				if (device == null)
 					continue
-				log.debug "Triggering motion for ${device}"
+				logDebug "Triggering motion for ${device}"
 				device.sendEvent(name: "motion", value: "active")
 				runIn(5, inactivate, [overwrite: false, data: [device: deviceName]])
 				break
@@ -506,7 +507,7 @@ def trigger(level) {
 				device = getChildDevice("ring:" + deviceName)
 				if (device == null)
 					continue
-				log.debug "Triggering button press for ${device}"
+				logDebug "Triggering button press for ${device}"
 				device.sendEvent(name: "pushed", value: "1")
 				break
 			}
@@ -517,7 +518,7 @@ def trigger(level) {
 				device = getChildDevice("ring:" + deviceName)
 				if (device == null)
 					continue
-				log.debug "Triggering motion for ${device}"
+				logDebug "Triggering motion for ${device}"
 				device.sendEvent(name: "motion", value: "active")
 				runIn(5, inactivate, [overwrite: false, data: [device: deviceName]])
 				break
@@ -529,6 +530,12 @@ def trigger(level) {
 def inactivate(data) {
 
 	def device = getChildDevice("ring:" + data.device)
-	log.debug "Cancelling motion for ${device}"
+	logDebug "Cancelling motion for ${device}"
 	device.sendEvent(name:"motion", value: "inactive")
+}
+
+private logDebug(msg) {
+	if (settings?.debugOutput) {
+		log.debug msg
+	}
 }
