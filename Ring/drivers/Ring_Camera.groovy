@@ -6,7 +6,7 @@
  */
 metadata {
 	definition (name: "Ring Camera", namespace: "ring", author: "Dominick Meglio") {
-		capability "Light"
+		capability "Switch"
 		capability "Refresh"
 		capability "Motion Sensor"
 		capability "Alarm"
