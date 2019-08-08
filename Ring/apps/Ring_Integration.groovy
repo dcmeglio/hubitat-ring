@@ -426,10 +426,11 @@ def handleRecord(device, cameraId) {
 	runCommandWithRetry(cameraId, "vod", "POST")
 }
 
-
-
 def runCommand(deviceId, command, method = "PUT", parameters = null) {
-	def params = [
+    def token = getAuthToken(state.token)
+	if (!token) return false
+	
+    def params = [
 		uri: "https://api.ring.com",
 		path: "/clients_api/doorbots/${deviceId}/${command}",
 		headers: [
@@ -437,7 +438,7 @@ def runCommand(deviceId, command, method = "PUT", parameters = null) {
 		],
 		query: [
         	api_version: "10",
-            "auth_token": state.token
+            "auth_token": token
     	]
 	]
 	if (parameters != null) {
