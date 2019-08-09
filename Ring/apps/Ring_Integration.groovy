@@ -87,7 +87,7 @@ def initialize() {
 	createChildDevices()
 	cleanupSettings()
 	runEvery5Minutes(updateDevices)
-	schedule("0 * * * * ? *", updateDevices)
+	schedule("0/30 * * * * ? *", updateDevices)
 }
 
 def updateDevices()
