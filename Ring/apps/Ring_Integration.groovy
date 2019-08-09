@@ -90,43 +90,18 @@ def initialize() {
 	schedule("0 * * * * ? *", updateDevices)
 }
 
-def getAuthToken(token)
-{
-    params = [
-    	uri: "https://api.ring.com",
-    	path: "/clients_api/session",
-        headers: [
-        	Authorization: "Bearer ${token}",
-            "User-Agent": "iOS"
-    	],
-        requestContentType: "application/x-www-form-urlencoded",
-        body: "device%5Bos%5D=ios&device%5Bhardware_id%5D=a565187537a28e5cc26819e594e28213&api_version=9"
-	]
-
-    try {
-        httpPost(params) { resp ->
-            return resp.data.profile.authentication_token
-        }
-    } catch (e) {
-        log.error "HTTP Exception Received on POST: $e"
-        log.error "response data: ${resp.data}"
-        login()
-        return        
-    }
-}
-
 def updateDevices()
 {
 	logDebug "refreshing ring devices"
-	def token = getAuthToken(state.token)
-	if (!token) return false
+	def authToken = getAuthToken(state.token)
+	if (!authToken) return false
 
     def params = [
 		uri: "https://api.ring.com",
 		path: "/clients_api/ring_devices",
 		query: [
         	api_version: "9",
-            "auth_token": token
+            "auth_token": authToken
     	]
 	]
     try
@@ -195,16 +170,19 @@ def getRingDevices() {
 	state.doorbells = [:]
 	state.cameras = [:]
 	state.cameraDetails = [:]
+    
 	def token = login()
-	if (token == false)
-		return false
+	if (!token) return false
+    
+    def authToken = getAuthToken(token)
+    if (!authToken) return false
 	
 	def params = [
 		uri: "https://api.ring.com",
 		path: "/clients_api/ring_devices",
 		query: [
         	api_version: "9",
-            "auth_token": token
+            "auth_token": authToken
     	]
 	]
 	try
@@ -326,10 +304,12 @@ def cleanupSettings()
 
 def login() 
 {
-	logDebug "Refreshing token"
 	state.token = null
+    
 	def s = "${ringUsername}:${ringPassword}"
-	String encodedUandP = s.bytes.encodeBase64()
+    logDebug "login()"
+	
+    String encodedUandP = s.bytes.encodeBase64()
     
     def token = "EMPTY"
     def params = [
@@ -349,13 +329,43 @@ def login()
 		if (e.statusCode == 401)
 			return false
         log.error "HTTP Exception Received on POST: $e"
-        return
-        
+        return        
     }
     
 	state.token = token
     return token
 }
+
+
+def getAuthToken(token)
+{
+    logDebug "getAuthToken()"
+    params = [
+    	uri: "https://api.ring.com",
+    	path: "/clients_api/session",
+        headers: [
+        	Authorization: "Bearer ${token}",
+            "User-Agent": "iOS"
+    	],
+        requestContentType: "application/x-www-form-urlencoded",
+        body: "device%5Bos%5D=ios&device%5Bhardware_id%5D=a565187537a28e5cc26819e594e28213&api_version=9"
+    ]
+
+    def authToken = "EMPTY"
+    try {
+        httpPost(params) { resp ->
+            authToken = resp.data.profile.authentication_token
+        }
+    } catch (e) {
+        log.error "HTTP Exception Received on POST: $e"
+        log.error "response data: ${resp.data}"
+        login()
+        return        
+    }
+    
+    return authToken
+}
+
 
 def handleOn(device, cameraId) {
 	logDebug "Handling On event for ${cameraId}"
@@ -427,8 +437,8 @@ def handleRecord(device, cameraId) {
 }
 
 def runCommand(deviceId, command, method = "PUT", parameters = null) {
-    def token = getAuthToken(state.token)
-	if (!token) return false
+    def authToken = getAuthToken(state.token)
+    if (!authToken) return false
 	
     def params = [
 		uri: "https://api.ring.com",
@@ -438,7 +448,7 @@ def runCommand(deviceId, command, method = "PUT", parameters = null) {
 		],
 		query: [
         	api_version: "10",
-            "auth_token": token
+            "auth_token": authToken
     	]
 	]
 	if (parameters != null) {
