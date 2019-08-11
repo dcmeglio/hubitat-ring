@@ -521,7 +521,7 @@ def trigger(level) {
 				if (device == null)
 					continue
 				logDebug "Triggering button press for ${device}"
-				device.sendEvent(name: "pushed", value: "1")
+				device.sendEvent(name: "pushed", value: 1, isStateChange: true)
 				break
 			}
 		}

@@ -23,5 +23,5 @@ def installed() {
 }
 
 def push() {
-	sendEvent(name: "pushed", value: "1")
+	sendEvent(name: "pushed", value: 1,  stateChange: true)
 }
