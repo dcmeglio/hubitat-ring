@@ -81,6 +81,14 @@ def updated() {
 	initialize()
 }
 
+def uninstalled() {
+	logDebug "Uninstalled app"
+	for (device in getChildDevices())
+	{
+		deleteChildDevice(device.deviceNetworkId)
+	}
+}
+
 def initialize() {
 	logDebug "initializing"
 	cleanupChildDevices()
