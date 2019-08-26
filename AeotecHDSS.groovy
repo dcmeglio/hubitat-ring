@@ -18,6 +18,7 @@
  *
  *  Revision History
  *  ==============================================
+ *  2019-08-25 Version 5.5.0  Removed unnecessary tiles for HE, if $/kWh is not set, don't log related events
  *  2019-05-13 Version 5.4.0  Modified for Heavy Duty Smart Switch on Hubitat
  *  2019-03-25 Version 5.3.0  Fixed watt display and other small display tweaks
  *  2018-02-10 Version 5.2.1  Small Crash protection fix (reported by: dkorunic)
@@ -65,7 +66,7 @@
  */
 
 def clientVersion() {
-    return "5.4.0"
+    return "5.5.0"
 }
 
 metadata {
@@ -95,118 +96,8 @@ metadata {
         // Base on https://community.smartthings.com/t/new-z-wave-fingerprint-format/48204
          fingerprint mfr: "0134", prod: "0259", model: "0078"
    }
-
-    tiles(scale: 2) {
-        multiAttributeTile(name: "mainPanel", type: "lighting", width: 6, height: 4, canChangeIcon: true) {
-            tileAttribute("device.switch", key: "PRIMARY_CONTROL") {
-                attributeState "on", label: '${name}', action: "switch.off", icon: "st.Appliances.appliances17", backgroundColor: "#00a0dc", nextState: "turningOff"
-                attributeState "off", label: '${name}', action: "switch.on", icon: "st.Appliances.appliances17", backgroundColor: "#ffffff", nextState: "turningOn"
-                attributeState "turningOn", label: '${name}', action: "switch.off", icon: "st.Appliances.appliances17", backgroundColor: "#00a0dc", nextState: "turningOff"
-                attributeState "turningOff", label: '${name}', action: "switch.on", icon: "st.Appliances.appliances17", backgroundColor: "#ffffff", nextState: "turningOn"
-            }
-//            tileAttribute("statusText3", key: "SECONDARY_CONTROL") {
-//                attributeState "statusText3", label: '${currentValue}'
-//            }
-        }
-        standardTile("deviceMode", "deviceMode", canChangeIcon: true, canChangeBackground: false, width: 2, height: 2) {
-            state "energy", label: 'energy', action: "momentary", icon: "http://mail.lgk.com/aeonv6orange.png"
-            state "momentary", label: 'momentary', action: "nightLight", icon: "http://mail.lgk.com/aeonv6white.png"
-            state "nightLight", label: 'NightLight', action: "energy", icon: "http://mail.lgk.com/aeonv6blue.png"
-        }
-
-        valueTile("power", "device.power", width: 2, height: 1, decoration: "flat") {
-            state "default", label: '${currentValue} W'
-        }
-
-        valueTile("energy", "device.energy", width: 2, height: 1, decoration: "flat") {
-            state "default", label: '${currentValue} kWh'
-        }
-
-        valueTile("amperage", "device.amperage", width: 2, height: 1, decoration: "flat") {
-            state "default", label: '${currentValue} A'
-        }
-
-        valueTile("voltage", "device.voltage", width: 4, height: 1, decoration: "flat") {
-            state "default", label: '${currentValue} v'
-        }
-        valueTile("energyMeterRuntime", "energyMeterRuntime", width: 2, height: 1, decoration: "flat") {
-            state "default", label: 'Energy Meter Running Since:'
-        }
-        valueTile("currentEnergyCostTxt", "currentEnergyCostTxt", width: 2, height: 1, decoration: "flat") {
-            state "default", label: 'Energy Cost (Current):'
-        }
-
-        valueTile("currentEnergyCostHour", "currentEnergyCostHour", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nHour\n$${currentValue}'
-        }
-
-        valueTile("currentEnergyCostWeek", "currentEnergyCostWeek", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nWeek\n$${currentValue}'
-        }
-
-        valueTile("currentEnergyCostMonth", "currentEnergyCostMonth", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nMonth\n$${currentValue}'
-        }
-
-        valueTile("currentEnergyCostYear", "currentEnergyCostYear", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nYear\n$${currentValue}'
-        }
-
-        valueTile("cumulativeEnergyCostTxt", "cumulativeEnergyCostTxt", width: 2, height: 1, decoration: "flat") {
-            state "default", label: 'Energy Cost (Cumulative)\nSince ${currentValue}:'
-        }
-
-        valueTile("cumulativeEnergyCostHour", "cumulativeEnergyCostHour", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nHour \n$${currentValue}'
-        }
-
-        valueTile("cumulativeEnergyCostWeek", "cumulativeEnergyCostWeek", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nWeek\n$${currentValue}'
-        }
-
-        valueTile("cumulativeEnergyCostMonth", "cumulativeEnergyCostMonth", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nMonth\n$${currentValue}'
-        }
-
-        valueTile("cumulativeEnergyCostYear", "cumulativeEnergyCostYear", width: 1, height: 1, decoration: "flat") {
-            state "default", label: 'Per\nYear \n$${currentValue}'
-        }
-
-        controlTile("levelSliderControl", "device.brightnessLevel", "slider", width: 2, height: 1) {
-            state "level", action: "switch level.setLevel"
-        }
-
-        valueTile("levelSliderTxt", "device.brightnessLevel", decoration: "flat") {
-            state "brightnessLevel", label: '${currentValue} %'
-        }
-
-        standardTile("refresh", "device.switch", decoration: "flat", width: 2, height: 2) {
-            state "default", label: "", action: "refresh.refresh", icon: "st.secondary.refresh"
-        }
-
-        standardTile("reset", "device.energy", decoration: "flat", width: 2, height: 2) {
-            state "default", label: 'reset', action: "reset", icon: "st.secondary.refresh-icon"
-        }
-
-        controlTile("rgbSelector", "device.color", "color", height: 3, width: 2) {
-            state "color", action: "setColor"
-        }
-
-        standardTile("configure", "device.power", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
-            state "configure", label: '', action: "configuration.configure", icon: "st.secondary.configure"
-        }
-
-        valueTile("deviceInfo", "deviceInfo", decoration: "flat", width: 6, height: 2) {
-            state "default", label: '${currentValue}', action: "getDeviceInfo"
-        }
-
-        main(["mainPanel", "power", "voltage", "amperage"])
-        details(["mainPanel", "deviceMode", "power", "amperage", "voltage",
-                 "currentEnergyCostTxt", "currentEnergyCostHour", "currentEnergyCostWeek", "currentEnergyCostMonth", "currentEnergyCostYear",
-                 "cumulativeEnergyCostTxt", "cumulativeEnergyCostHour", "cumulativeEnergyCostWeek", "cumulativeEnergyCostMonth", "cumulativeEnergyCostYear",
-                 "configure", "refresh", "reset", "deviceInfo"])
-    }
 }
+
 
 preferences {
 ////    input title: "", description: "Aeon Smart Switch 6 (gen5) v${clientVersion()}", displayDuringSetup: true, type: "paragraph", element: "paragraph"
@@ -385,23 +276,28 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
 
             BigDecimal costDecimal = ( costPerKwh as BigDecimal )
             def batteryRunTimeHours = getBatteryRuntimeInHours()
-            
-			eventList.push(internalCreateEvent([name: "cumulativeEnergyCostTxt", value: getBatteryRuntime() + "\n" + cmd.scaledMeterValue + " kWh"]));
-			eventList.push(internalCreateEvent([name: "cumulativeEnergyCostHour", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal)]));
-            eventList.push(internalCreateEvent([name: "cumulativeEnergyCostWeek", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 7)]));
-            eventList.push(internalCreateEvent([name: "cumulativeEnergyCostMonth", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 30.42)]));
-            eventList.push(internalCreateEvent([name: "cumulativeEnergyCostYear", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 365)]));
+            if (costDecimal > 0)
+			{
+				eventList.push(internalCreateEvent([name: "cumulativeEnergyCostTxt", value: getBatteryRuntime() + "\n" + cmd.scaledMeterValue + " kWh"]));
+				eventList.push(internalCreateEvent([name: "cumulativeEnergyCostHour", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal)]));
+				eventList.push(internalCreateEvent([name: "cumulativeEnergyCostWeek", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 7)]));
+				eventList.push(internalCreateEvent([name: "cumulativeEnergyCostMonth", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 30.42)]));
+				eventList.push(internalCreateEvent([name: "cumulativeEnergyCostYear", value: String.format("%5.2f", cmd.scaledMeterValue / batteryRunTimeHours * costDecimal * 24 * 365)]));
+			}
         } else if (cmd.scale == 1) {
             logDebug " got kVAh $cmd.scaledMeterValue"
             eventList.push(internalCreateEvent([name: "energy", value: cmd.scaledMeterValue, unit: "kVAh"]));
         } else if (cmd.scale == 2) {
             logDebug " got wattage $cmd.scaledMeterValue"
             eventList.push(internalCreateEvent([name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W"]));
-            BigDecimal costDecimal = ( costPerKwh as BigDecimal )
-            eventList.push(internalCreateEvent([name: "currentEnergyCostHour", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * costDecimal)]));
-            eventList.push(internalCreateEvent([name: "currentEnergyCostWeek", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 7 * costDecimal)]));
-            eventList.push(internalCreateEvent([name: "currentEnergyCostMonth", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 30.42 * costDecimal)]));
-            eventList.push(internalCreateEvent([name: "currentEnergyCostYear", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 365 * costDecimal)]));
+			BigDecimal costDecimal = ( costPerKwh as BigDecimal )
+			if (costDecimal > 0)
+			{
+				eventList.push(internalCreateEvent([name: "currentEnergyCostHour", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * costDecimal)]));
+				eventList.push(internalCreateEvent([name: "currentEnergyCostWeek", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 7 * costDecimal)]));
+				eventList.push(internalCreateEvent([name: "currentEnergyCostMonth", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 30.42 * costDecimal)]));
+				eventList.push(internalCreateEvent([name: "currentEnergyCostYear", value: String.format("%5.2f", (cmd.scaledMeterValue / 1000) * 24 * 365 * costDecimal)]));
+			}
         } else if (cmd.scale == 4) { // Volts
             logDebug " got voltage $cmd.scaledMeterValue"
             eventList.push(internalCreateEvent([name: "voltage", value: Math.round(cmd.scaledMeterValue), unit: "V"]));
@@ -694,15 +590,20 @@ def refresh() {
     sendEvent(name: "amperage", value: "0", displayed: true, unit: "A")
     sendEvent(name: "voltage", value: "0", displayed: true, unit: "V")
 
-    sendEvent(name: "currentEnergyCostHour", value: "0", displayed: true)
-    sendEvent(name: "currentEnergyCostWeek", value: "0", displayed: true)
-    sendEvent(name: "currentEnergyCostMonth", value: "0", displayed: true)
-    sendEvent(name: "currentEnergyCostYear", value: "0", displayed: true)
+	BigDecimal costDecimal = ( costPerKwh as BigDecimal )
+	
+	if (costDecimal > 0)
+	{
+		sendEvent(name: "currentEnergyCostHour", value: "0", displayed: true)
+		sendEvent(name: "currentEnergyCostWeek", value: "0", displayed: true)
+		sendEvent(name: "currentEnergyCostMonth", value: "0", displayed: true)
+		sendEvent(name: "currentEnergyCostYear", value: "0", displayed: true)
 
-    sendEvent(name: "cumulativeEnergyCostHour", value: "0", displayed: true)
-    sendEvent(name: "cumulativeEnergyCostWeek", value: "0", displayed: true)
-    sendEvent(name: "cumulativeEnergyCostMonth", value: "0", displayed: true)
-    sendEvent(name: "cumulativeEnergyCostYear", value: "0", displayed: true)
+		sendEvent(name: "cumulativeEnergyCostHour", value: "0", displayed: true)
+		sendEvent(name: "cumulativeEnergyCostWeek", value: "0", displayed: true)
+		sendEvent(name: "cumulativeEnergyCostMonth", value: "0", displayed: true)
+		sendEvent(name: "cumulativeEnergyCostYear", value: "0", displayed: true)
+	}
 
     delayBetween([
             formatCommand(zwave.switchMultilevelV1.switchMultilevelGet()),
