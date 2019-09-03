@@ -13,3 +13,4 @@ To use the Ring integration, first install the Ring_Integration app. Next instal
 
 ## Quick Summary
 Basically, when the Alexa routine occurs, the Ring Manager device will be set to a specific dimmer level. The Ring Integration app will translate this to triggering motion or a button push for the appropriate ring virtual device.
+
